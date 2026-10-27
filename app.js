@@ -19,32 +19,32 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
   function ms(n) { return Number.isFinite(Number(n)) ? Math.round(Number(n)) + " ms" : "n/a"; }
   function diag(message) {
-    const line = new Date().toLocaleTimeString("ro-RO", { hour12: false }) + "  " + message;
+    const line = new Date().toLocaleTimeString("en-GB", { hour12: false }) + "  " + message;
     diagEntries.push(line);
     if (diagEntries.length > 35) diagEntries.shift();
     $("diagnostic-log").textContent = diagEntries.join("\n");
   }
-  diag("WarpCoil 1.3.1 activ; diagnostic pregătit.");
+  diag("WarpCoil 1.3.2 active; diagnostics ready.");
 
   $("copy-diagnostics").addEventListener("click", async () => {
-    const report = "WarpCoil 1.3.1\n" + $("speed-result").textContent + "\n" + diagEntries.join("\n");
+    const report = "WarpCoil 1.3.2\n" + $("speed-result").textContent + "\n" + diagEntries.join("\n");
     try {
       await navigator.clipboard.writeText(report);
-      $("copy-diagnostics").textContent = "Copiat ✓";
-      setTimeout(() => { $("copy-diagnostics").textContent = "Copiază diagnosticul"; }, 1600);
+      $("copy-diagnostics").textContent = "Copied ✓";
+      setTimeout(() => { $("copy-diagnostics").textContent = "Copy diagnostics"; }, 1600);
     } catch {
-      window.prompt("Selectează și copiază diagnosticul:", report);
+      window.prompt("Select and copy the diagnostics:", report);
     }
   });
 
   $("speed-test").addEventListener("click", async () => {
     const button = $("speed-test");
     if (processing) {
-      $("speed-result").textContent = "Așteaptă finalizarea transferului înainte de a testa rețeaua.";
+      $("speed-result").textContent = "Wait for the transfer to finish before testing the network.";
       return;
     }
     button.disabled = true;
-    $("speed-result").textContent = "Testez 8 MB între iPhone și PC…";
+    $("speed-result").textContent = "Testing 8 MB between iPhone and PC…";
     // Exactly the same 2 MiB PUT shape as the real upload, but no disk IO.
     const chunk = new Uint8Array(2 * 1024 * 1024);
     chunk.fill(0x5a);
@@ -65,20 +65,20 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
             cache: "no-store",
           });
           const data = await res.json();
-          if (!res.ok || data.bytes !== chunk.byteLength) throw new Error(data.error || "Răspuns invalid la test");
+          if (!res.ok || data.bytes !== chunk.byteLength) throw new Error(data.error || "Invalid test response");
           sent += data.bytes;
           totalServerReadMs += data.serverReadMs || 0;
-          $("speed-result").textContent = `Test local: ${i+1}/4 blocuri trimise…`;
+          $("speed-result").textContent = `Local test: ${i+1}/4 chunks sent…`;
         } finally { clearTimeout(timeout); }
       }
       const seconds = (performance.now() - t0) / 1000;
       const mbps = sent * 8 / seconds / 1e6;
-      const result = `Rețea locală: ${mbps.toFixed(1)} Mbps (${humanSize(sent/seconds)}/s) · ` +
-                     `8 MB în ${seconds.toFixed(2)} s · timp citire server ${Math.round(totalServerReadMs)} ms`;
+      const result = `Local network: ${mbps.toFixed(1)} Mbps (${humanSize(sent/seconds)}/s) · ` +
+                     `8 MB in ${seconds.toFixed(2)} s · server read time ${Math.round(totalServerReadMs)} ms`;
       $("speed-result").textContent = result;
       diag("TEST LOCAL: " + result);
     } catch (err) {
-      const message = `Test local eșuat: ${err.message || String(err)}`;
+      const message = `Local test failed: ${err.message || String(err)}`;
       $("speed-result").textContent = message;
       diag(message);
     } finally { button.disabled = false; }
@@ -135,7 +135,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
         $("main-panel").hidden = true;
         $("pair-panel").hidden = false;
       }
-      throw new Error(data.error || "Conexiunea cu PC-ul a eșuat");
+      throw new Error(data.error || "The connection to the computer failed");
     }
     return data;
   }
@@ -145,13 +145,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
     $("pair-panel").hidden = true;
     $("main-panel").hidden = false;
     $("save-folder").textContent = info.folder;
-    $("free-space").textContent = humanSize(info.free) + " spațiu liber";
+    $("free-space").textContent = humanSize(info.free) + " free space";
     if (boot.local) {
       $("pc-panel").hidden = false;
       $("lan-url").textContent = `http://${info.ip}:${info.port}`;
       $("pc-pin").textContent = info.pin || "······";
     } else {
-      $("upload-step").textContent = "TRIMITE DIN IPHONE";
+      $("upload-step").textContent = "SEND FROM IPHONE";
     }
   }
 
@@ -181,9 +181,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
     const url = $("lan-url").textContent;
     try {
       await navigator.clipboard.writeText(url);
-      $("copy-url").textContent = "Copiat ✓";
-      setTimeout(() => $("copy-url").textContent = "Copiază", 1500);
-    } catch { window.prompt("Copiază adresa:", url); }
+      $("copy-url").textContent = "Copied ✓";
+      setTimeout(() => $("copy-url").textContent = "Copy", 1500);
+    } catch { window.prompt("Copy the address:", url); }
   });
 
   function makeRow(file) {
@@ -203,7 +203,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
     identity.append(title, sub);
     const status = document.createElement("span");
     status.className = "file-status";
-    status.textContent = "În așteptare";
+    status.textContent = "Waiting";
     const track = document.createElement("div");
     track.className = "progress-track";
     const fill = document.createElement("div");
@@ -242,12 +242,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || `Eroare la bloc: ${response.status}`);
       if (!Number.isSafeInteger(data.offset) || data.offset <= offset || data.offset > offset + bytes.byteLength) {
-        throw new Error("Confirmare invalidă de la calculator");
+        throw new Error("Invalid confirmation from the computer");
       }
       return data;
     } catch (error) {
       if (error.name === "AbortError") {
-        throw new Error(paused ? "Transfer pus pe pauză" : "Blocul nu a primit confirmare în 45 de secunde");
+        throw new Error(paused ? "Transfer paused" : "Chunk did not receive confirmation within 45 seconds");
       }
       throw error;
     } finally {
@@ -266,7 +266,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
     let retries = 0;
     const start = Date.now();
     let firstBytes = 0;
-    draw(item, 0, "Pregătire transfer…");
+    draw(item, 0, "Preparing transfer…");
     const fingerprint = fileFingerprint(item.file);
     const identity = {
       client: getClientId(), name: item.file.name,
@@ -279,29 +279,29 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
     let offset = state.offset;
     firstBytes = offset;
     if (offset > 0) {
-      draw(item, offset, "Se reia…");
-      diag(`Reluare ${item.file.name.slice(0, 28)}: ${humanSize(offset)} salvate`);
+      draw(item, offset, "Resuming…");
+      diag(`Resume ${item.file.name.slice(0, 28)}: ${humanSize(offset)} already saved`);
     }
     while (offset < item.file.size) {
       await waitIfPaused();
       const piece = item.file.slice(offset, Math.min(item.file.size, offset + state.chunkSize));
       try {
-        draw(item, offset, `Citesc din iPhone… ${humanSize(offset)} / ${humanSize(item.file.size)}`);
+        draw(item, offset, `Reading from iPhone… ${humanSize(offset)} / ${humanSize(item.file.size)}`);
         // Read the 2 MiB explicitly before fetch. iOS may otherwise defer
         // reading a Photos/File-provider Blob during an active HTTP upload.
         const tRead = performance.now();
         const readTicker = setInterval(() => {
-          draw(item, offset, `Citire din iPhone: ${Math.round((performance.now() - tRead)/1000)} s…`);
+          draw(item, offset, `Reading from iPhone: ${Math.round((performance.now() - tRead)/1000)} s…`);
         }, 1000);
         let bytes;
         try { bytes = await piece.arrayBuffer(); }
         finally { clearInterval(readTicker); }
         const clientReadMs = performance.now() - tRead;
         if (paused) { await waitIfPaused(); }
-        draw(item, offset, `Trimitere bloc · ${humanSize(offset)} / ${humanSize(item.file.size)}`);
+        draw(item, offset, `Sending chunk · ${humanSize(offset)} / ${humanSize(item.file.size)}`);
         const tSend = performance.now();
         const sendTicker = setInterval(() => {
-          draw(item, offset, `Aștept confirmarea PC: ${Math.round((performance.now() - tSend)/1000)} s…`);
+          draw(item, offset, `Waiting for PC confirmation: ${Math.round((performance.now() - tSend)/1000)} s…`);
         }, 1000);
         let res;
         try { res = await sendChunk(state.id, offset, bytes); }
@@ -310,19 +310,19 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
         offset = res.offset;
         item.confirmed = offset;
         retries = 0;
-        diag(`${humanSize(offset)}: iPhone ${ms(clientReadMs)}; HTTP+confirmare ${ms(roundtripMs)}; ` +
-             `server-citire ${ms(res.serverReadMs)}; disc ${ms(res.serverWriteMs)}; fsync ${ms(res.serverSyncMs)}`);
+        diag(`${humanSize(offset)}: iPhone ${ms(clientReadMs)}; HTTP+confirmation ${ms(roundtripMs)}; ` +
+             `server-read ${ms(res.serverReadMs)}; disk ${ms(res.serverWriteMs)}; fsync ${ms(res.serverSyncMs)}`);
         const elapsed = (Date.now() - start) / 1000;
         const speed = elapsed > 1 ? (offset - firstBytes) / elapsed : 0;
         const pct = offset / item.file.size * 100;
-        const label = pct > 0 && pct < 0.1 ? "<0,1%" : `${Math.floor(pct)}%`;
+        const label = pct > 0 && pct < 0.1 ? "<0.1%" : `${Math.floor(pct)}%`;
         draw(item, offset, `${label}${speed > 0 ? " · " + humanSize(speed) + "/s" : ""}`);
       } catch (error) {
         diag(`Bloc ${humanSize(offset)}: ${error.message || String(error)}`);
         if (!paused) {
           retries++;
           if (retries > 4) throw error;
-          draw(item, offset, `Reconectare ${retries}/4…`);
+          draw(item, offset, `Reconnecting ${retries}/4…`);
           await new Promise((resolve) => setTimeout(resolve, 750 * retries));
         }
         await waitIfPaused();
@@ -334,11 +334,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
         offset = state.offset;
       }
     }
-    draw(item, item.file.size, "Se finalizează…");
+    draw(item, item.file.size, "Finishing…");
     const result = await jsonRequest(`/api/finish/${state.id}`, { method: "POST" });
-    draw(item, item.file.size, "Finalizat ✓", "completed");
-    diag(`Finalizat ${item.file.name.slice(0, 28)}: ${humanSize(item.file.size)}`);
-    item.ui.row.title = `Salvat pe calculator ca ${result.name}`;
+    draw(item, item.file.size, "Completed ✓", "completed");
+    diag(`Completed ${item.file.name.slice(0, 28)}: ${humanSize(item.file.size)}`);
+    item.ui.row.title = `Saved on the computer as ${result.name}`;
   }
 
   async function runQueue() {
@@ -353,19 +353,19 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
         item.state = "done";
       } catch (error) {
         item.state = "failed";
-        draw(item, item.confirmed || 0, error.message || "Transfer eșuat", "failed");
+        draw(item, item.confirmed || 0, error.message || "Transfer failed", "failed");
       }
     }
     processing = false;
     paused = false;
     $("pause-button").hidden = true;
-    $("pause-button").textContent = "Pauză";
+    $("pause-button").textContent = "Pause";
     try { await loadInfo(); } catch { /* no network */ }
   }
 
   $("pause-button").addEventListener("click", () => {
     paused = !paused;
-    $("pause-button").textContent = paused ? "Reia" : "Pauză";
+    $("pause-button").textContent = paused ? "Resume" : "Pause";
     if (paused) {
       if (currentController) currentController.abort();
     } else if (wakeResume) {
