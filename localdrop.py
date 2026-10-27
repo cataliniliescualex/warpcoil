@@ -3,7 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-"""WarpCoil 1.3.1 — resumable LAN uploads with speed diagnostics."""
+"""WarpCoil 1.3.2 — resumable LAN uploads with speed diagnostics."""
 
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ class State:
 
     def paths(self, upload_id: str) -> tuple[Path, Path]:
         if not ID_RE.fullmatch(upload_id):
-            raise ValueError("Identificator invalid")
+            raise ValueError("Invalid identifier")
         return self.parts / f"{upload_id}.json", self.parts / f"{upload_id}.part"
 
     def init_upload(self, data: dict) -> dict:
@@ -122,15 +122,15 @@ class State:
         mtime = data.get("mtime")
         fingerprint = data.get("fingerprint")
         if not isinstance(name, str) or not name or len(name) > 1024:
-            raise ValueError("Nume de fișier invalid")
+            raise ValueError("Invalid file name")
         if type(size) is not int or not (0 <= size <= MAX_FILE_SIZE):
-            raise ValueError("Dimensiune invalidă")
+            raise ValueError("Invalid size")
         if not isinstance(client, str) or not CLIENT_RE.fullmatch(client):
-            raise ValueError("Sesiune invalidă")
+            raise ValueError("Invalid session")
         if type(mtime) is not int or mtime < 0:
-            raise ValueError("Data fișierului este invalidă")
+            raise ValueError("Invalid file date")
         if not isinstance(fingerprint, str) or not FINGERPRINT_RE.fullmatch(fingerprint):
-            raise ValueError("Amprenta fișierului este invalidă")
+            raise ValueError("Invalid file fingerprint")
         name = safe_filename(name)
         signature = json.dumps([client, name, size, fingerprint], ensure_ascii=False)
         upload_id = hashlib.sha256(signature.encode("utf-8")).hexdigest()
@@ -139,7 +139,7 @@ class State:
             if meta_path.exists():
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
                 if (meta["name"], meta["size"], meta["fingerprint"]) != (name, size, fingerprint):
-                    raise ValueError("Datele transferului nu coincid")
+                    raise ValueError("Transfer metadata does not match")
                 if not part_path.exists():
                     part_path.touch()
             else:
@@ -150,29 +150,29 @@ class State:
                 meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
             offset = part_path.stat().st_size
             if offset > size:
-                raise ValueError("Transferul parțial are o dimensiune invalidă")
+                raise ValueError("Partial transfer has an invalid size")
         return {"id": upload_id, "offset": offset, "chunkSize": CHUNK_MAX}
 
     def status(self, upload_id: str) -> dict:
         meta_path, part_path = self.paths(upload_id)
         with self.lock_for(upload_id):
             if not meta_path.is_file() or not part_path.is_file():
-                raise FileNotFoundError("Transferul nu mai există")
+                raise FileNotFoundError("Transfer no longer exists")
             return {"offset": part_path.stat().st_size}
 
     def append_chunk(self, upload_id: str, offset: int, length: int, input_stream) -> dict:
         meta_path, part_path = self.paths(upload_id)
         if length <= 0 or length > CHUNK_MAX or offset < 0:
-            raise ValueError("Dimensiunea blocului este invalidă")
+            raise ValueError("Invalid chunk size")
         with self.lock_for(upload_id):
             if not meta_path.is_file() or not part_path.is_file():
-                raise FileNotFoundError("Transferul nu există")
+                raise FileNotFoundError("Transfer does not exist")
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
             actual = part_path.stat().st_size
             if actual != offset:
                 return {"conflict": True, "offset": actual}
             if offset + length > meta["size"]:
-                raise ValueError("Blocul depășește dimensiunea fișierului")
+                raise ValueError("Chunk exceeds file size")
             read_s = write_s = sync_s = 0.0
             with part_path.open("r+b") as output:
                 output.seek(offset)
@@ -197,7 +197,7 @@ class State:
                     os.fsync(output.fileno())
                     sync_s = time.perf_counter() - t
             if remaining:
-                raise ValueError("Conexiunea s-a întrerupt în timpul blocului")
+                raise ValueError("Connection was interrupted during the chunk")
             return {"offset": offset + length,
                     "serverReadMs": round(read_s * 1000, 1),
                     "serverWriteMs": round(write_s * 1000, 1),
@@ -207,10 +207,10 @@ class State:
         meta_path, part_path = self.paths(upload_id)
         with self.lock_for(upload_id):
             if not meta_path.is_file() or not part_path.is_file():
-                raise FileNotFoundError("Transferul nu există")
+                raise FileNotFoundError("Transfer does not exist")
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
             if part_path.stat().st_size != meta["size"]:
-                raise ValueError("Transferul nu este complet")
+                raise ValueError("Transfer is not complete")
             # Ensure all content is committed before marking the file complete.
             with part_path.open("r+b") as output:
                 output.flush()
@@ -243,7 +243,7 @@ class State:
 
 
 class AppHandler(BaseHTTPRequestHandler):
-    server_version = "WarpCoil/1.3.1"
+    server_version = "WarpCoil/1.3.2"
     # A fresh connection for each chunk avoids stale persistent sockets on iOS.
     protocol_version = "HTTP/1.0"
 
@@ -287,16 +287,16 @@ class AppHandler(BaseHTTPRequestHandler):
         except ValueError:
             raise ValueError("Content-Length invalid") from None
         if not 0 < length <= 32768:
-            raise ValueError("Dimensiune cerere invalidă")
+            raise ValueError("Invalid request size")
         data = json.loads(self.rfile.read(length))
         if not isinstance(data, dict):
-            raise ValueError("Date invalide")
+            raise ValueError("Invalid data")
         return data
 
     def authorized(self) -> bool:
         provided = self.headers.get("X-LocalDrop-Token", "")
         if not hmac.compare_digest(provided, self.state.token):
-            self.respond(401, {"error": "Conectează-te din nou cu codul de pe PC"})
+            self.respond(401, {"error": "Pair again using the code shown on the computer"})
             return False
         return True
 
@@ -341,7 +341,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 })
             if path.startswith("/api/status/"):
                 return self.respond(200, self.state.status(path.rsplit("/", 1)[-1]))
-            return self.respond(404, {"error": "Pagina nu există"})
+            return self.respond(404, {"error": "Page not found"})
         except (ValueError, FileNotFoundError) as exc:
             return self.respond(404, {"error": str(exc)})
 
@@ -352,7 +352,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 data = self.read_json()
                 pin = data.get("pin", "")
                 if not isinstance(pin, str) or not self.state.pair(self.client_address[0], pin):
-                    return self.respond(403, {"error": "Cod greșit sau prea multe încercări"})
+                    return self.respond(403, {"error": "Wrong code or too many attempts"})
                 return self.respond(200, {"token": self.state.token})
             if not self.authorized():
                 return
@@ -360,13 +360,13 @@ class AppHandler(BaseHTTPRequestHandler):
                 return self.respond(200, self.state.init_upload(self.read_json()))
             if path.startswith("/api/finish/"):
                 return self.respond(200, self.state.finish_upload(path.rsplit("/", 1)[-1]))
-            return self.respond(404, {"error": "Operație necunoscută"})
+            return self.respond(404, {"error": "Unknown operation"})
         except (ValueError, KeyError, json.JSONDecodeError) as exc:
             return self.respond(400, {"error": str(exc)})
         except FileNotFoundError as exc:
             return self.respond(404, {"error": str(exc)})
         except OSError as exc:
-            return self.respond(507, {"error": f"Nu se poate scrie pe disc: {exc.strerror}"})
+            return self.respond(507, {"error": f"Cannot write to disk: {exc.strerror}"})
 
     def do_PUT(self):
         path = urlsplit(self.path)
@@ -378,20 +378,20 @@ class AppHandler(BaseHTTPRequestHandler):
             try:
                 length = int(self.headers.get("Content-Length", "-1"))
                 if not 0 < length <= CHUNK_MAX:
-                    raise ValueError("Dimensiune test invalidă")
+                    raise ValueError("Invalid test size")
                 remaining = length
                 start = time.perf_counter()
                 while remaining:
                     block = self.rfile.read(min(256 * 1024, remaining))
                     if not block:
-                        raise ValueError("Date de test incomplete")
+                        raise ValueError("Incomplete test data")
                     remaining -= len(block)
                 return self.respond(200, {"bytes": length,
                                           "serverReadMs": round((time.perf_counter() - start) * 1000, 1)})
             except (ValueError, OSError, TimeoutError) as exc:
                 return self.respond(400, {"error": str(exc)})
         if not path.path.startswith("/api/upload/"):
-            return self.respond(404, {"error": "Operație necunoscută"})
+            return self.respond(404, {"error": "Unknown operation"})
         try:
             length = int(self.headers.get("Content-Length", "-1"))
             offset = int(parse_qs(path.query).get("offset", ["-1"])[0])
@@ -402,9 +402,9 @@ class AppHandler(BaseHTTPRequestHandler):
                 return self.respond(409, result)
             if result["offset"] <= 16 * 1024 * 1024 or result["offset"] % (32 * 1024 * 1024) == 0:
                 print(f"[WarpCoil] {path.path.rsplit('/', 1)[-1][:8]}: "
-                      f"{result['offset']:,} octeți; "
-                      f"citire LAN {result['serverReadMs']} ms, "
-                      f"disc {result['serverWriteMs']} ms, "
+                      f"{result['offset']:,} bytes; "
+                      f"LAN read {result['serverReadMs']} ms, "
+                      f"disk {result['serverWriteMs']} ms, "
                       f"sync {result['serverSyncMs']} ms", flush=True)
             return self.respond(200, result)
         except (ValueError, KeyError) as exc:
@@ -413,7 +413,7 @@ class AppHandler(BaseHTTPRequestHandler):
             return self.respond(404, {"error": str(exc)})
         except (OSError, TimeoutError) as exc:
             try:
-                return self.respond(507, {"error": "Conexiune întreruptă sau scriere nereușită"})
+                return self.respond(507, {"error": "Connection interrupted or disk write failed"})
             except (OSError, BrokenPipeError):
                 return
 
@@ -429,32 +429,32 @@ class AppServer(ThreadingHTTPServer):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="WarpCoil — transfer iPhone → PC prin Wi-Fi")
+    parser = argparse.ArgumentParser(description="WarpCoil — iPhone to PC transfer over Wi-Fi")
     parser.add_argument("--port", type=int, default=8765, help="Port local (implicit 8765)")
     parser.add_argument("--folder", type=Path, default=Path.home() / "Videos" / "LocalDrop",
-                        help="Dosarul în care ajung fișierele")
-    parser.add_argument("--no-browser", action="store_true", help="Nu deschide automat browserul")
+                        help="Folder where received files are saved")
+    parser.add_argument("--no-browser", action="store_true", help="Do not open the browser automatically")
     args = parser.parse_args()
     try:
         state = State(args.folder)
         server = AppServer(("0.0.0.0", args.port), state)
     except OSError as exc:
-        print(f"Eroare la pornire: {exc}", file=sys.stderr)
+        print(f"Startup error: {exc}", file=sys.stderr)
         return 1
     url = f"http://{server.lan_ip}:{server.server_port}"
-    print("\n  WARPCOIL — transfer direct iPhone → PC")
+    print("\n  WARPCOIL — direct iPhone to PC transfer")
     print("  -------------------------------------")
-    print(f"  Pe iPhone, deschide Safari: {url}")
-    print(f"  Cod de conectare: {state.pin}")
-    print(f"  Fișiere salvate în: {state.destination}")
-    print("  PC-ul poate fi prin cablu, iPhone-ul prin Wi-Fi (aceeași rețea).")
-    print("  Închide cu Ctrl+C; nu este nevoie de internet.\n")
+    print(f"  On iPhone, open Safari: {url}")
+    print(f"  Pairing code: {state.pin}")
+    print(f"  Files saved in: {state.destination}")
+    print("  The PC may be wired while the iPhone is on Wi-Fi (same network).")
+    print("  Close with Ctrl+C; internet is not required.\n")
     if not args.no_browser:
         webbrowser.open(f"http://127.0.0.1:{server.server_port}")
     try:
         server.serve_forever(poll_interval=0.2)
     except KeyboardInterrupt:
-        print("\nWarpCoil oprit.")
+        print("\nWarpCoil stopped.")
     finally:
         server.server_close()
     return 0

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2 — English interface update
+
+- Translated the web UI, diagnostics, console output, and messages into English.
+- Preserved the same transfer engine, pairing protocol, and resume metadata.
+
+
 ## 1.3.1 — WarpCoil rebranding
 
 - Changed visible product name and landing-page identity from LocalDrop to WarpCoil.
