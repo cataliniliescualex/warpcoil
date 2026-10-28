@@ -8,6 +8,12 @@ WarpCoil transfers original-quality videos and other files from an iPhone browse
 
 > **English UI beta — version 1.3.2.** Tested by the project creator on Windows, Ubuntu and an iPhone with files larger than 4 GB. This is community-tested beta software, not a security-audited release.
 
+## Watch WarpCoil in action
+
+[![WarpCoil demonstration — iPhone to PC file transfer](https://img.youtube.com/vi/lI9utA7NhBM/hqdefault.jpg)](https://www.youtube.com/shorts/lI9utA7NhBM)
+
+**[▶ Watch the demo on YouTube](https://www.youtube.com/shorts/lI9utA7NhBM)** — see a real iPhone-to-PC local file transfer.
+
 ## Features
 
 - Local network transfer; no cloud account or remote upload service.
