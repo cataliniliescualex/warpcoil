@@ -39,8 +39,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         proc = subprocess.Popen(
             [str(binary), '--no-browser', '--port', str(port), '--folder', str(Path(tmp) / 'inbox')],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, errors='replace',
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         try:
             page = None
@@ -88,14 +87,20 @@ def main():
             assert saved.read_bytes() == payload
             print('PASS: frozen binary serves bundled UI, protects API, writes file, and completes transfer')
         finally:
-            proc.terminate()
+            # A PyInstaller one-file build creates a child process on Windows.
+            # Terminating only the bootloader parent can leave that child alive
+            # and the redirected pipe open. Stop the process tree instead.
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/PID', str(proc.pid), '/T', '/F'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               timeout=10, check=False)
+            else:
+                proc.terminate()
             try:
-                out, _ = proc.communicate(timeout=10)
+                proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 proc.kill()
-                out, _ = proc.communicate(timeout=10)
-            if proc.returncode not in (0, -15, 1) and out:
-                print(out[-1800:], file=sys.stderr)
+                proc.wait(timeout=10)
 
 if __name__ == '__main__':
     main()
