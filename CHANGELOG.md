@@ -1,5 +1,12 @@
 # Changelog
 
+## Standalone binary packaging (additional v1.3.2 distribution)
+
+- Added native Windows x64 and Linux x64 one-file builds via PyInstaller and GitHub Actions.
+- Each binary bundles Python, the HTML/CSS/JavaScript UI, MPL-2.0 license and security documentation.
+- Added HTTP/API upload smoke tests against compiled binaries on both operating systems.
+- No changes to the v1.3.2 transfer protocol, resume mechanism, or receiving folder.
+
 ## 1.3.2 — English interface update
 
 - Translated the web UI, diagnostics, console output, and messages into English.
