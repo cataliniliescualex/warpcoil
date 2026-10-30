@@ -57,3 +57,26 @@ jobs:
           path: release/*
           if-no-files-found: error
           retention-days: 30
+
+  publish:
+    name: Attach compiled binaries to v1.3.2 release
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.head_commit.message, '[publish v1.3.2 binaries]')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified build packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Attach Windows and Linux binaries to existing beta release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -f artifacts/WarpCoil-windows-x64/WarpCoil-Windows-x64.zip
+          test -f artifacts/WarpCoil-linux-x64/WarpCoil-Linux-x64.tar.gz
+          gh release upload v1.3.2 \
+            artifacts/WarpCoil-windows-x64/WarpCoil-Windows-x64.zip \
+            artifacts/WarpCoil-linux-x64/WarpCoil-Linux-x64.tar.gz \
+            --repo "$GITHUB_REPOSITORY" --clobber
