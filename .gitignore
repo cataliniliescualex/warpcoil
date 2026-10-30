@@ -10,3 +10,9 @@ Thumbs.db
 *.tmp
 *.log
 .env
+
+# PyInstaller and release artifacts
+build/
+dist/
+release/
+*.spec.bak

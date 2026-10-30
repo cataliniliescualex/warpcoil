@@ -23,9 +23,20 @@ WarpCoil transfers original-quality videos and other files from an iPhone browse
 - Built-in local-network speed test and diagnostic logs.
 - Preserve the transmitted file bytes; WarpCoil itself does not re-encode videos.
 
-## Requirements
+## Standalone Windows and Linux apps — no Python installation
 
-- Python 3.9+ on the receiving computer (standard library only).
+The [standalone build workflow](https://github.com/cataliniliescualex/warpcoil/actions/workflows/build-binaries.yml) compiles and tests two downloadable beta packages using native GitHub-hosted runners:
+
+- **Windows x64:** `WarpCoil-Windows-x64.zip` includes `WarpCoil.exe`. Extract it, then double-click the executable.
+- **Ubuntu/Linux x64:** `WarpCoil-Linux-x64.tar.gz` includes `WarpCoil`. Extract and run `./WarpCoil` from a terminal.
+
+Both packages bundle Python and the web interface; users **do not need to install Python**. They remain console applications so the local address and six-digit PIN are visible. Linux targets Ubuntu 22.04+ x86_64; Windows binaries are unsigned.
+
+See [BINARY_INSTALL.md](BINARY_INSTALL.md) for setup, supported platforms, security, and compatibility. These are alternate distributions of the v1.3.2 engine; the existing Python source version continues to work.
+
+## Requirements (running from source)
+
+- Python 3.9+ on the receiving computer (standard library only); not required for the standalone binaries.
 - Windows or Ubuntu/Linux; iPhone with Safari on the same trusted local network.
 - Enough free storage for the incoming files.
 
